@@ -6,6 +6,19 @@
 <script type="text/javascript" charset="utf-8" src="jquery-1.8.2.min.js"></script>
 <script type="text/javascript" charset="utf-8" src="jquery.mobile-1.2.0.min.js"></script>
 <link rel="stylesheet" type="text/css" href="jquery.mobile-1.2.0.min.css" media="screen" />
+<script type="text/javascript">
+    /**
+    $(document).ready( function () {
+
+        $('#projectsListPage').live ('pagecreate', function(){
+            $('#projectsList').delegate('li', 'vclick', function(){
+                alert('list item clicked');
+            });
+        });
+        $('#projectsList').listview('refresh');
+    });
+    */
+</script>
 <style type="text/css">
 #startBtn,#pauseBtn {
 	color: blue;
@@ -42,7 +55,7 @@ body {
 		
 		$(document).ready(
 			function(){
-				$.ajax( { url: "https://api.mongolab.com/api/1/databases/my_projects/collections/projects?s={'updated': -1}&apiKey=507d8f9be4b0335961b8c0f5",
+				$.ajax( { url: "https://api.mongolab.com/api/1/databases/my_projects/collections/projects?s={'updated': 1}&apiKey=507d8f9be4b0335961b8c0f5",
 			          type: "GET",
 			          contentType: "application/json",
 			          cache:false,
@@ -55,18 +68,59 @@ body {
 				} );
 			}		
 		)
+
+        function getOrderedProjectsList(){
+
+        }
 		
 		function loadProjects(){
-			for(var project in projectsList){
-				createProjectListRecord(projectsList[project]);
+			for(var i = projectsList.length-1; i > 0; i--){
+				createProjectListRecord(projectsList[i]);
 			}
 		}
 
-        function createProjectListRecord(project){
-            $("#listOfProjects")
+        function reloadProjects(){
+            clearProjectsPage();
+            loadProjects();
         }
-		
-		function findProjectById(id){
+
+        function clearProjectsPage(){
+            $("#projectsList").empty();
+        }
+
+        //onclick="addHourToProject('+project+')"
+        //+project.name+
+        //'<span id="totalHours_"'+project._id["$oid"]+' class="ui-li-count">'+projectTotalHours(project)+'</span>' +
+        function createProjectListRecord(project){
+            var project_id=project._id["$oid"];
+            $("#projectsList").append(
+                    '<li>' +
+                            '<a id="addHour_'+project_id+'")>'+project.name+
+                                '<span id="totalHours_'+project_id+'" class="ui-li-count">'+projectTotalHours(project)+'</span>' +
+                            '</a>' +
+                            '<a href="#hoursNotesPage" id="hoursNotes_'+project_id+'"></a>'+
+                    '</li>');
+            $('#addHour_'+project_id).bind('click',
+                function(event){
+                    addHourToProject(project_id);
+                }
+            )
+
+            $('#hoursNotes_'+project_id).bind('click',
+                    function(event){
+
+                    }
+            )
+
+            $("#projectsList").listview('refresh');
+        }
+
+        //TODO API dependent
+        function notesPagePrepare(project_id){
+            var project=findProjectById(project_id);
+        }
+
+        function findProjectById(id){
 			for(project in projectsList){
 				if(projectsList[project]._id["$oid"]==id){
 					return projectsList[project];
@@ -80,7 +134,10 @@ body {
 		          	data:JSON.stringify(project),
 		          	cache:false,
 					type: "POST",
-		          	contentType: "application/json"
+		          	contentType: "application/json",
+                    success:function(){
+                        reloadProjects();
+                    }
 			});	
 		}
 		
@@ -95,13 +152,13 @@ body {
 		}
 		
 		//TODO API related fields.
-		function addHourToProject(project){
+		function addHourToProject(project_id){
+            var project=findProjectById(project_id)
 			var spentHoursEntry={};
 			spentHoursEntry.spent=1;
 			spentHoursEntry.when=new Date().getTime();
 			project.hours.push(spentHoursEntry);
 			updateProject(project);
-			$('#'+project._id["$oid"]+' .totalHours').html(projectTotalHours(project));
 		}
 		
 		//create empty project after user click
@@ -137,22 +194,8 @@ body {
 			if(project.name==""){
 				$('#'+project._id["$oid"]+' .descriptionSubmit').html(project.name)
 				.css('display', 'inline');	
-			}else{
-				$('#'+project._id["$oid"]+' .description').html(project.name)
-				.css('display', 'inline');
 			}
-			if(project.hours.length>0){
-				$('#'+project._id["$oid"]+' .totalHours').html(projectTotalHours(project));
-			}
-			$('#'+project._id["$oid"]).click(
-				function(event){
-					if(event.target.className=="hoursCounter"){
-						addHourToProject(project);
-					}
-				}		
-			)
-			
-			
+
 		}
 		
 		function descriptionEdit(event) {
@@ -168,18 +211,15 @@ body {
 				project.name=$(event.target).val();
 				//ajax update 
 				updateProject(project);
-				$(event.target).css('display', 'none')
-				$(event.target).parent().find('.description').html(project.name).css('display', 'inline');
+				$(event.target).css('display', 'none');
 			}
 		}
 		function onTextAreaBlur(event) {
 			//TODO update
 			$(event.target).css('display', 'none')
-			$(event.target).parent().find('.description').html(
-					$(event.target).val()).css('display', 'inline')
 		}
 	</script>
-    <div data-role="page">
+    <div data-role="page" id="projectsListPage">
         <div data-role="header">
             <h1>Projects List</h1>
         </div><!-- /header -->
@@ -189,18 +229,24 @@ body {
                     <a id='addProjectBtn' onclick='return addNewProject()'>Add Project</a>
                 </div>
                 <div class='hoursCounterTemplate'>
-                    <div class='toolBar'>
-                        <a class="totalHours"></a>
-                    </div>
                     <a class="description" onclick='return descriptionEdit(event)'></a>
                     <textarea class='descriptionSubmit' rows="1" cols="20"
                               style='display: none' onblur='onTextAreaBlur(event)'
                               onkeypress='return textAreaSubmit(event)'></textarea>
                     <br>
-                    <div class='separator' />
                 </div>
             </div>
-            <ul data-role="listview" class="listOfProjects">
+            <ul data-role="listview" id="projectsList" data-filter="true">
+            </ul>
+        </div><!-- /content -->
+    </div><!-- /page -->
+
+    <div data-role="page" id="hoursNotesPage">
+        <div data-role="header">
+            <h1>Hours Notes</h1>
+        </div><!-- /header -->
+        <div data-role="content">
+            <ul data-role="listview" id="hoursNotes" data-filter="true">
 
             </ul>
         </div><!-- /content -->
