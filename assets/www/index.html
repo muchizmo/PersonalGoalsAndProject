@@ -6,41 +6,6 @@
 <script type="text/javascript" charset="utf-8" src="jquery-1.8.2.min.js"></script>
 <script type="text/javascript" charset="utf-8" src="jquery.mobile-1.2.0.min.js"></script>
 <link rel="stylesheet" type="text/css" href="jquery.mobile-1.2.0.min.css" media="screen" />
-<script type="text/javascript">
-    /**
-    $(document).ready( function () {
-
-        $('#projectsListPage').live ('pagecreate', function(){
-            $('#projectsList').delegate('li', 'vclick', function(){
-                alert('list item clicked');
-            });
-        });
-        $('#projectsList').listview('refresh');
-    });
-    */
-</script>
-<style type="text/css">
-#startBtn,#pauseBtn {
-	color: blue;
-}
-
-.hoursCounter {
-	background-color: LightGreen;
-	width: 400px;
-	min-height: 40px;
-	min-height: 100%;
-}
-
-.separator {
-	background-color: LightBlue;
-	width: 400px;
-	height: 4px;
-}
-
-.startTime {
-	color: gray;
-}
-</style>
 <title>Reporter</title>
 <style type='text/css'>
 body {
@@ -160,13 +125,19 @@ body {
 			project.hours.push(spentHoursEntry);
 			updateProject(project);
 		}
+
+        function addNewProjectPopupSubmit(projectName){
+            addNewProject(projectName, function(){
+                $('#addProjectPopup').popup('close')
+            });
+        }
 		
 		//create empty project after user click
-		function addNewProject(){
+		function addNewProject(projectName,cb){
 			var newProject={};
 			newProject.created=new Date().getTime();
 			newProject.updated=newProject.created;
-			newProject.name="";
+			newProject.name=projectName;
 			newProject.hours=[];
 			$.ajax( { url: "https://api.mongolab.com/api/1/databases/my_projects/collections/projects?apiKey=507d8f9be4b0335961b8c0f5",
 		          data:JSON.stringify(newProject),
@@ -177,67 +148,41 @@ body {
 		        	  newProject._id={}
 		        	  newProject._id["$oid"]=data._id["$oid"];
 		        	  projectsList.push(newProject);
-		        	  addProject(newProject);
+		        	  reloadProjects();
+                      cb();
 		          }
 			});
 		}
 	
-		//used to populate gui
-		function addProject(project) {
-			
-			$('.hoursCounterTemplate')
-								.clone()
-								.removeClass('hoursCounterTemplate')
-								.addClass('hoursCounter')
-								.attr("id",project._id["$oid"])
-								.appendTo('#interactBlock');
-			if(project.name==""){
-				$('#'+project._id["$oid"]+' .descriptionSubmit').html(project.name)
-				.css('display', 'inline');	
-			}
-
-		}
-		
-		function descriptionEdit(event) {
-			$(event.target).css('display', 'none')
-			$(event.target).parent().find('.descriptionSubmit').css('display',
-					'inline')
-		}
-		function textAreaSubmit(event) {
-			//TODO update
-			if (13 == event.keyCode) {
-				var projectId=$(event.target).parent().attr('id');
-				var project=findProjectById(projectId);
-				project.name=$(event.target).val();
-				//ajax update 
-				updateProject(project);
-				$(event.target).css('display', 'none');
-			}
-		}
-		function onTextAreaBlur(event) {
-			//TODO update
-			$(event.target).css('display', 'none')
-		}
-	</script>
+    </script>
     <div data-role="page" id="projectsListPage">
         <div data-role="header">
             <h1>Projects List</h1>
         </div><!-- /header -->
         <div data-role="content">
+
             <div id="interactBlock">
                 <div id="btns">
-                    <a id='addProjectBtn' onclick='return addNewProject()'>Add Project</a>
-                </div>
-                <div class='hoursCounterTemplate'>
-                    <a class="description" onclick='return descriptionEdit(event)'></a>
-                    <textarea class='descriptionSubmit' rows="1" cols="20"
-                              style='display: none' onblur='onTextAreaBlur(event)'
-                              onkeypress='return textAreaSubmit(event)'></textarea>
-                    <br>
+                    <a href="#addProjectPopup" data-role="button" data-rel="popup" data-position-to="window">Add Project</a>
+                    <div data-role="popup" id="addProjectPopup" class="ui-content" data-overlay-theme="a" data-theme="a">
+                        <!--
+                            <a href="#" data-role="button" data-rel="back" data-theme="a" class="ui-btn-right" data-icon="delete" data-iconpos="notext"></a>
+                        -->
+                        <div style="padding: 10px 20px;">
+                            <h3>Give a name to new project</h3>
+                            <label for="newProjectNameInput" class="ui-hidden-accessible ui-input-text">Username:</label>
+                            <input type="text" id="newProjectNameInput" value="" placeholder="project name" data-theme="a" class="ui-input-text ui-body-a ui-corner-all ui-shadow-inset">
+                            <a href="#" data-role="button" data-theme="b" onclick="addNewProjectPopupSubmit($('#newProjectNameInput').val())">Add Project</a>
+                            <a href="#" data-role="button" data-rel="back" data-theme="c">Cancel</a>
+
+                        </div>
+                    </div>
                 </div>
             </div>
+
             <ul data-role="listview" id="projectsList" data-filter="true">
             </ul>
+
         </div><!-- /content -->
     </div><!-- /page -->
 
